@@ -526,13 +526,13 @@ STATIC mp_obj_t mod_pixels_color_from_palette_(mp_obj_t palette, mp_obj_t index,
     mp_buffer_info_t paletteinfo;
     mp_get_buffer_raise(palette, &paletteinfo, MP_BUFFER_READ);
     if (paletteinfo.len != 64 || mp_binary_get_size('<', paletteinfo.typecode, NULL) != 4) {
-        mp_raise_ValueError("bad palette");
+        mp_raise_ValueError(MP_ERROR_TEXT("bad palette"));
     }
     uint32_t *pal = (uint32_t*)paletteinfo.buf;
     uint32_t idx = mp_obj_get_int(index);
     float bright = mp_obj_get_float(brightness);
     if (bright < 0.0f || bright > 1.0f) {
-        mp_raise_ValueError("bad brightness");
+        mp_raise_ValueError(MP_ERROR_TEXT("bad brightness");
     }
     return mp_obj_new_int(mod_pixels_color_from_palette(pal, idx, bright * 255.0f + 0.5f));
 }
@@ -579,7 +579,7 @@ STATIC mp_obj_t mod_pixels_fill_rainbow_(mp_obj_t buf, mp_obj_t huestart, mp_obj
     uint32_t *pixels = (uint32_t*)bufinfo.buf;
     float hue_f = mp_obj_get_float(huestart);
     if (hue_f < 0.0f || hue_f > 1.0f) {
-        mp_raise_ValueError("bad huestart");
+        mp_raise_ValueError(MP_ERROR_TEXT("bad huestart"));
     }
     uint8_t hue  = hue_f * 255.0f + 0.5f;
     int8_t inc = mp_obj_get_float(hueinc) * 255.0f + 0.5f;
@@ -610,7 +610,7 @@ STATIC mp_obj_t mod_pixels_fill_rainbow_array_(const size_t n_args, const mp_obj
             sats_inc = 2;
             sats++; // works on little endian systems
         } else {
-            mp_raise_ValueError("bad sats");
+            mp_raise_ValueError(MP_ERROR_TEXT("bad sats"));
         }
     }
     if (args[3] != mp_const_none) {
@@ -623,7 +623,7 @@ STATIC mp_obj_t mod_pixels_fill_rainbow_array_(const size_t n_args, const mp_obj
             vals_inc = 2;
             vals++; // works on little endian systems
         } else {
-            mp_raise_ValueError("bad vals");
+            mp_raise_ValueError(MP_ERROR_TEXT("bad vals"));
         }
     }
     uint8_t sat=255, val=255;
@@ -661,7 +661,7 @@ STATIC mp_obj_t mod_pixels_fill_rainbow_array_(const size_t n_args, const mp_obj
             pixels[i] = mod_pixels_hsv2rgb_rainbow(*a++ >> 8, sat, val);
         }
     } else {
-        mp_raise_ValueError("bad array");
+        mp_raise_ValueError(MP_ERROR_TEXT("bad array"));
     }
     return mp_const_none;
 }
@@ -674,13 +674,13 @@ STATIC mp_obj_t mod_pixels_fill_palette_array_(const size_t n_args, const mp_obj
     mp_get_buffer_raise(args[1], &paletteinfo, MP_BUFFER_READ);
     mp_get_buffer_raise(args[2], &arrayinfo, MP_BUFFER_READ);
     if (paletteinfo.len != 64 || mp_binary_get_size('<', paletteinfo.typecode, NULL) != 4) {
-        mp_raise_ValueError("bad palette");
+        mp_raise_ValueError(MP_ERROR_TEXT("bad palette"));
     }
     int32_t brightness = 255;
     if (n_args >= 4) {
         float b = mp_obj_get_float(args[3]);
         if (b < 0.0f || b > 1.0f) {
-            mp_raise_ValueError("bad brightness");
+            mp_raise_ValueError(MP_ERROR_TEXT("bad brightness"));
         }
         brightness = b * 255.0f + 0.5f;
     }
@@ -702,7 +702,7 @@ STATIC mp_obj_t mod_pixels_fill_palette_array_(const size_t n_args, const mp_obj
             pixels[i] = mod_pixels_color_from_palette(palette, *array++, brightness);
         }
     } else {
-        mp_raise_ValueError("bad array");
+        mp_raise_ValueError(MP_ERROR_TEXT("bad array"));
     }
     return mp_const_none;
 }
@@ -753,7 +753,7 @@ STATIC mp_obj_t mod_pixels_array_fill_(mp_obj_t array, mp_obj_t value) {
     mp_get_buffer_raise(array, &arrayinfo, MP_BUFFER_WRITE);
     int32_t val = mp_obj_get_float(value) * 65535.0f;
     if (val > 0xffff || val < 0) {
-        mp_raise_ValueError("value out of range");
+        mp_raise_ValueError(MP_ERROR_TEXT("value out of range"));
     }
     if (arrayinfo.typecode == BYTEARRAY_TYPECODE || arrayinfo.typecode == 'B') {
         val >>= 8;
@@ -767,7 +767,7 @@ STATIC mp_obj_t mod_pixels_array_fill_(mp_obj_t array, mp_obj_t value) {
             a[i] = val;
         }
     } else {
-        mp_raise_ValueError("bad buffer type");
+        mp_raise_ValueError(MP_ERROR_TEXT("bad buffer type"));
     }
     return mp_const_none;
 }
@@ -779,7 +779,7 @@ STATIC mp_obj_t mod_pixels_array_range_(mp_obj_t array, mp_obj_t start, mp_obj_t
     mp_get_buffer_raise(array, &arrayinfo, MP_BUFFER_WRITE);
     float n_f = mp_obj_get_float(start);
     if (n_f > 1.0f || n_f < 0.0f) {
-        mp_raise_ValueError("start out of range");
+        mp_raise_ValueError(MP_ERROR_TEXT("start out of range"));
     }
     float inc_f = mp_obj_get_float(step);
     if (arrayinfo.typecode == BYTEARRAY_TYPECODE || arrayinfo.typecode == 'B') {
@@ -799,7 +799,7 @@ STATIC mp_obj_t mod_pixels_array_range_(mp_obj_t array, mp_obj_t start, mp_obj_t
             n += inc;
         }
     } else {
-        mp_raise_ValueError("bad buffer type");
+        mp_raise_ValueError(MP_ERROR_TEXT("bad buffer type"));
     }
     return mp_const_none;
 }
@@ -817,7 +817,7 @@ STATIC mp_obj_t mod_pixels_array_fill_random_(const size_t n_args, const mp_obj_
     uint32_t start = mp_obj_get_float(args[1]) * 65535.0f;
     uint32_t stop = mp_obj_get_float(args[2]) * 65535.0f;
     if (start >= stop || start > 0xffff || start < 0 || stop > 0xffff || stop < 0) {
-        mp_raise_ValueError("bad range");
+        mp_raise_ValueError(MP_ERROR_TEXT("bad range"));
     }
     uint32_t width = stop - start;
     // TODO implement step
@@ -838,7 +838,7 @@ STATIC mp_obj_t mod_pixels_array_fill_random_(const size_t n_args, const mp_obj_
             array[i] = start + n % width;
         }
     } else {
-        mp_raise_ValueError("bad buffer type");
+        mp_raise_ValueError(MP_ERROR_TEXT("bad buffer type"));
     }
     return mp_const_none;
 }
@@ -868,7 +868,7 @@ STATIC mp_obj_t mod_pixels_array_fill_noise_(size_t n_args, const mp_obj_t *args
             y += yscale;
         }
     } else {
-        mp_raise_ValueError("bad buffer type");
+        mp_raise_ValueError(MP_ERROR_TEXT("bad buffer type"));
     }
     return mp_const_none;
 }
@@ -882,17 +882,17 @@ STATIC bool mod_pixels_array_prepare_op(mp_buffer_info_t *arrayinfo, mp_buffer_i
     } else if (arrayinfo->typecode == 'H') {
         awide = true;
     } else {
-        mp_raise_ValueError("bad buffer type");
+        mp_raise_ValueError(MP_ERROR_TEXT("bad buffer type"));
     }
     if (valuesinfo->typecode == BYTEARRAY_TYPECODE || valuesinfo->typecode == 'B') {
         vwide = false;
     } else if (valuesinfo->typecode == 'H') {
         vwide = true;
     } else {
-        mp_raise_ValueError("bad buffer type");
+        mp_raise_ValueError(MP_ERROR_TEXT("bad buffer type"));
     }
     if (awide != vwide) {
-        mp_raise_ValueError("incompatible buffers");
+        mp_raise_ValueError(MP_ERROR_TEXT("incompatible buffers"));
     }
     return awide;
 }
@@ -952,7 +952,7 @@ STATIC mp_obj_t mod_pixels_array_add_(mp_obj_t array, mp_obj_t value) {
             a[i] = t;
         }
     } else {
-        mp_raise_ValueError("bad buffer type");
+        mp_raise_ValueError(MP_ERROR_TEXT("bad buffer type"));
     }
     return mp_const_none;
 }
@@ -1031,7 +1031,7 @@ STATIC mp_obj_t mod_pixels_array_sin_(mp_obj_t array) {
             a[i] = mod_pixels_sin16(a[i]) + 32767;
         }
     } else {
-        mp_raise_ValueError("bad buffer type");
+        mp_raise_ValueError(MP_ERROR_TEXT("bad buffer type"));
     }
     return mp_const_none;
 }
@@ -1052,7 +1052,7 @@ STATIC mp_obj_t mod_pixels_array_reverse_(mp_obj_t array) {
         }
     } else {
         // unimplemented
-        mp_raise_ValueError("bad buffer type");
+        mp_raise_ValueError(MP_ERROR_TEXT("bad buffer type"));
     }
     return mp_const_none;
 }

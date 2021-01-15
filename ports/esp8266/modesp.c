@@ -204,7 +204,7 @@ STATIC mp_obj_t esp_neopixel_write_(mp_obj_t pin, mp_obj_t buf, mp_obj_t config)
     mp_buffer_info_t bufinfo;
     mp_get_buffer_raise(buf, &bufinfo, MP_BUFFER_READ);
     esp_neopixel_write(mp_obj_get_pin_obj(pin)->phys_port,
-        (uint8_t*)bufinfo.buf, bufinfo.len, mp_obj_get_int(config));
+        (uint32_t*)bufinfo.buf, bufinfo.len, mp_obj_get_int(config));
     return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_3(esp_neopixel_write_obj, esp_neopixel_write_);
