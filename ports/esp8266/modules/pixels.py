@@ -3,7 +3,6 @@
 
 import _pixels
 import array
-from esp import neopixel_write
 from micropython import const
 
 RGB    = const(0xf210)
@@ -61,7 +60,7 @@ class Pixels:
         '''
         Update the LED strip.
         '''
-        neopixel_write(self.pin, self.buf, self.config)
+        _pixels.write(self.pin, self.buf, self.config)
 
     def fill_solid(self, color):
         '''

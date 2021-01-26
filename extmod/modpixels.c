@@ -44,6 +44,73 @@
 #define K170 170
 #define K85  85
 
+#define NEO_KHZ400 (1)
+#define NEO_VARIANT (0x10000)
+#define NEO_VARIANT_400 (0x10000)
+#define NEO_VARIANT_800 (0x00000)
+
+void /*ICACHE_RAM_ATTR*/ esp_modpixels_write(uint8_t pin, uint32_t *pixels, uint32_t numBytes, uint32_t config) {
+
+  uint32_t *p, *end, pix, mask;
+  uint32_t t, time0, time1, period, c, startTime, startMask, pinMask;
+
+  pinMask   = 1 << pin;
+  p         =  pixels;
+  end       =  p + numBytes/4;
+  pix       = 0;
+  mask      = 0;
+  startTime = 0;
+  startMask = 0x80000000;
+
+  uint32_t fcpu = system_get_cpu_freq() * 1000000;
+  uint32_t wIndex = ((config & 0xf000) >> 12) * 8;
+  uint32_t rIndex = ((config & 0x0f00) >> 8)  * 8;
+  uint32_t gIndex = ((config & 0x00f0) >> 4)  * 8;
+  uint32_t bIndex = ((config & 0x000f) >> 0)  * 8;
+
+  if ((config & 0xf000) == 0xf000) {
+    // disable white
+    wIndex = 24;
+    startMask = 0x800000;
+  }
+
+#ifdef NEO_KHZ400
+  if((config & NEO_VARIANT) == NEO_VARIANT_800) {
+#endif
+    time0  = fcpu / 2857143; // 0.35us
+    time1  = fcpu / 1250000; // 0.8us
+    period = fcpu /  800000; // 1.25us per bit
+#ifdef NEO_KHZ400
+  } else { // 400 KHz bitstream
+    time0  = fcpu / 2000000; // 0.5uS
+    time1  = fcpu /  833333; // 1.2us
+    period = fcpu /  400000; // 2.5us per bit
+  }
+#endif
+
+  uint32_t irq_state = mp_hal_quiet_timing_enter();
+  for(t = time0;; t = time0) {
+    if(!mask) {                                           // Next bit/byte
+      if(p >= end) break;
+      pix = *p++;
+      pix = ((pix & 0xff000000) >> 24 << wIndex) |
+            ((pix & 0x00ff0000) >> 16 << rIndex) |
+            ((pix & 0x0000ff00) >>  8 << gIndex) |
+            ((pix & 0x000000ff) >>  0 << bIndex);
+      mask = startMask;
+    }
+    if(pix & mask) t = time1;                             // Bit high duration
+    while(((c = mp_hal_ticks_cpu()) - startTime) < period); // Wait for bit start
+    GPIO_REG_WRITE(GPIO_OUT_W1TS_ADDRESS, pinMask);       // Set high
+    startTime = c;                                        // Save start time
+    while(((c = mp_hal_ticks_cpu()) - startTime) < t);      // Wait high duration
+    GPIO_REG_WRITE(GPIO_OUT_W1TC_ADDRESS, pinMask);       // Set low
+    mask >>= 1;
+  }
+  while((mp_hal_ticks_cpu() - startTime) < period); // Wait for last bit
+  mp_hal_quiet_timing_exit(irq_state);
+}
+
 static int mod_pixels_scale8(int i, int frac) {
     return (i * (1+frac)) >> 8;
 }
@@ -1085,6 +1152,15 @@ STATIC mp_obj_t mod_pixels_array_copy_(mp_obj_t array, mp_obj_t values) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(mod_pixels_array_copy_obj, mod_pixels_array_copy_);
 
 
+STATIC mp_obj_t mod_pixels_write_(mp_obj_t pin, mp_obj_t buf, mp_obj_t config) {
+    mp_buffer_info_t bufinfo;
+    mp_get_buffer_raise(buf, &bufinfo, MP_BUFFER_READ);
+    esp_modpixels_write(mp_obj_get_pin_obj(pin)->phys_port,
+        (uint32_t*)bufinfo.buf, bufinfo.len, mp_obj_get_int(config));
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_3(mod_pixels_write_obj, mod_pixels_write_);
+
 STATIC const mp_rom_map_elem_t mp_module_pixels_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__), MP_ROM_QSTR(MP_QSTR__pixels) },
 #ifdef MICROPY_PY_PIXELS_SMALL_FUNCTIONS
@@ -1111,6 +1187,7 @@ STATIC const mp_rom_map_elem_t mp_module_pixels_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_array_sin), MP_ROM_PTR(&mod_pixels_array_sin_obj) },
     { MP_ROM_QSTR(MP_QSTR_array_reverse), MP_ROM_PTR(&mod_pixels_array_reverse_obj) },
     { MP_ROM_QSTR(MP_QSTR_array_copy), MP_ROM_PTR(&mod_pixels_array_copy_obj) },
+    { MP_ROM_QSTR(MP_QSTR_write), MP_ROM_PTR(&mod_pixels_write_obj) },
 };
 
 STATIC MP_DEFINE_CONST_DICT(mp_module_pixels_globals, mp_module_pixels_globals_table);
